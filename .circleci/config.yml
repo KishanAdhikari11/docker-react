@@ -1,0 +1,63 @@
+version: 2.1
+orbs:
+  node: circleci/node@5
+
+jobs:
+  build:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - checkout
+
+      - setup_remote_docker:
+          version: 20.10.17
+
+      - run:
+          name: Build Docker Image
+          command: docker build -t my-app:latest -f Dockerfile.dev .
+
+      - persist_to_workspace:
+          root: .
+          paths:
+            - my-app-image.tar.gz
+
+  test:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - checkout
+
+      - attach_workspace:
+          at: .
+      - setup_remote_docker:
+          version: 20.10.17
+
+      - run:
+          name: Load Docker Image
+          command: gunzip < my-app-image.tar.gz | docker load
+
+      - run:
+          name: Run Tests
+          command: docker run --rm my-app:latest npm test
+
+  deploy:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - checkout
+
+     
+      - run:
+          name: Deploy Application
+          command: echo "Deploying application (example)"
+
+workflows:
+  build-and-test-and-deploy:
+    jobs:
+      - build
+      - test:
+          requires:
+            - build
+      - deploy:
+          requires:
+            - test
